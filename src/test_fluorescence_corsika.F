@@ -16,13 +16,11 @@
       iflag = 2
 
       call fyield ( zemision, edep, nflpht, iflag, ier, 0, lamb )
-      write(*,*)  nflpht
+      write(*,*)  "Number of fluorescence photons:",nflpht
       if ( nflpht .lt. 1 ) return
 
       if ( ier .eq. 1 ) write(*,*)
      *   "warning!, too many fluorescence photons produced at once" 
-
-      write(*,*)  nflpht
 
       END PROGRAM testing
 
