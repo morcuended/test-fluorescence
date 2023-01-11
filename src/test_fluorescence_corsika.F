@@ -3,10 +3,22 @@
       implicit none
       integer ier, iflag, nflpht
       double precision zem, edep, lamb, zemision
+      double precision temperatura, densidad
+C
+      double precision temp, pressure, rhof
+      external temp, pressure, rhof
+
 
       zem = 5.0d5
       edep = 1.0d1
-
+C 
+C-First test the basic functions
+C
+      densidad = rhof(zem)
+      write(6,*) " densidad is ", densidad     
+C
+      temperatura = temp(zem)
+      write(6,*) " temperature is ", temperatura     
 
       ! Add fluorescence initialization
       CALL FYINI
@@ -111,8 +123,8 @@ c
           phtyield = yint(maxiz) * edep  
         endif
 
-c        nphots = int(phtyield) ! Uncomment this for tests
-        call mpoiss(phtyield, nphots )
+        nphots = int(phtyield) ! Uncomment this for tests
+C        call mpoiss(phtyield, nphots )
 
 c  Warning in case of getting a very large number of photons 
         if (nphots .gt. nphmax) then 
@@ -273,6 +285,10 @@ c  set by the cwavlg in the input card (same as for Cherenkov).
 c  The rows used are determined only once depending on the lower
 c  and upper limits.
 c
+C-JLC: fix wavelength limits by hand
+C
+      wavlgl = 280.D0
+      wavlgu = 700.D0  
       do i = 1, nfltab
         ifwlenl = i
         if (lamb(i) .ge. wavlgl) exit
@@ -282,6 +298,7 @@ c
         if (lamb(i) .gt. wavlgu) exit
         ifwlenu = i
       enddo
+      write(6,*),ifwlenl, ifwlenu
 c
       do izem = 1, maxiz
         zem = 1.0D4*10**(0.03*(izem-1)) ! zem in cm
@@ -301,6 +318,7 @@ c  only photons moving downwards.
 c  Normalize the fluorescence yield in each band
         do i = ifwlenl, ifwlenu
            yieldi(i,izem) = yieldi(i,izem) / yint(izem) 
+C           write(6,*) yint(izem)
         enddo
 c     
       enddo
