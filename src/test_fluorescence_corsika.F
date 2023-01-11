@@ -1,20 +1,30 @@
 ! Test fluorescence subroutines
       PROGRAM testing
       implicit none
+      integer ier, iflag, nflpht
+      double precision zem, edep, lamb, zemision
+
+      zem = 5.0d5
+      edep = 1.0d1
+
+
       ! Add fluorescence initialization
       CALL FYINI
-      !  Determine the number of fluorescence photons to be emitted in
-      !  each step.
+      ! Determine the number of fluorescence photons to be emitted in
+      ! each step.
       ier = 0
       iflag = 2
 
       call fyield ( zemision, edep, nflpht, iflag, ier, 0, lamb )
+      write(*,*)  nflpht
       if ( nflpht .lt. 1 ) return
 
-      if ( ier .eq. 1 ) write(*,*) "Warning!"
-      !     *     "warning!, too many fluorescence photons produced at once" 
-      END PROGRAM testing
+      if ( ier .eq. 1 ) write(*,*)
+     *   "warning!, too many fluorescence photons produced at once" 
 
+      write(*,*)  nflpht
+
+      END PROGRAM testing
 
 
       subroutine fyield(zem,edep,nphots,iflag,ier,nbunch,lambda)
@@ -45,19 +55,17 @@ c#define __CEREN1INC__
 c#define __RUNPARINC__
 c#include "corsika.h"
 c
-c
 c-Arrays for fyield calculation
 c       
       integer ier,iflag,nbunch,nphmax
       parameter (nphmax = 3d5) 
       double precision zem, edep, lambda
       double precision xn
-c
+
       integer i, j, k, nfltab, ifwlenl, ifwlenu
       parameter (nfltab = 57)
       common /fluordat/lamb, il, pl, alp, ifwlenl, ifwlenu
       double precision lamb(nfltab),il(nfltab),pl(nfltab),alp(nfltab)
-c
 
       double precision pzero, tzero
       parameter (pzero = 800.d0, Tzero = 293.d0) !hPa, K respectively
@@ -70,30 +78,25 @@ c
       integer nphots
       double precision xran(nphmax)
 
-c
 c-Big table to keep the fluor yield as a function of wavelength
 c-and height in the atmosphere
-c
+
       integer izem, maxiz
       parameter (maxiz = 101)
       common /fztab/ztab, yint, yield, yieldi
       double precision y, ztab(maxiz), yield(nfltab,maxiz),
      &                 yieldi(nfltab,maxiz), yint(maxiz)
-c      
-      save
-
-
       
+      save
 c------------------------------------------------------------     
 
-c
       izem = max(int(log10(zem/1.0D4)/0.03)+1,1)
       if ( izem.lt.1 ) then
-       write(mdebug,*) "Fyield Error: izem < 0", izem
+       write(*,*) "Fyield Error: izem < 0", izem
        izem = 1
       endif 
       if ( izem.gt.maxiz ) then
-       write(mdebug,*) "Fyield Error: z too high ",zem/1.0d5,"km ",izem
+       write(*,*) "Fyield Error: z too high ",zem/1.0d5,"km ",izem
        izem = maxiz
       endif 
 c
@@ -115,8 +118,8 @@ c        nphots = int(phtyield) ! Uncomment this for tests
 
 c  Warning in case of getting a very large number of photons 
         if (nphots .gt. nphmax) then 
-            write(mdebug,*) "zem, edep ",zem, edep
-            if (debug) write(mdebug,*) "Error: ",nphmax - nphots,
+            write(*,*) "zem, edep ",zem, edep
+            write(*,*) "Error: ",nphmax - nphots,
      *                                 " remaining photons not stored"
             ier = 1
             nphots = nphmax
@@ -138,7 +141,7 @@ c  Return only a wavelength per bunch now
           enddo
         endif
        endif
-c
+
       return 
       end 
 
@@ -179,6 +182,7 @@ c
       double precision zem
       common /fluordat/lamb, il, pl, alp, ifwlenl, ifwlenu
       double precision lamb(nfltab),il(nfltab),pl(nfltab),alp(nfltab)
+      double precision wavlgl, wavlgu
 c
       double precision pzero, tzero
       parameter (pzero = 800.d0, Tzero = 293.d0) !hPa, K respectively
@@ -358,3 +362,204 @@ c-----------------------------------------------------------------------
       temp=Mmolar*pressure(arg)*1.d-1/(rhof(arg)*Rconst)
       
       end function temp
+
+
+*-- Author :    D. HECK IK FZK KARLSRUHE       15/10/1996
+C=======================================================================
+
+      SUBROUTINE MPOISS( AMEAN,NPRAN )
+
+C-----------------------------------------------------------------------
+C  M(UON COULOMB SCATTERING) POISS(ON DISTRIBUTION)
+C
+C  GENERATES A RANDOM NUMBER POISSON DISTRIBUTED WITH MEAN VALUE AMEAN.
+C  THIS SUBROUTINE IS IN ANALOGY WITH SUBROUT. GPOISS.
+C  (AUTHOR: L. URBAN) OF GEANT321
+C  SEE CERN PROGRAM LIBRARY LONG WRITEUP W5013.
+C  THIS SUBROUTINE IS CALLED FROM MUCOUL.
+C  ARGUMENTS:
+C   AMEAN  =  MEAN VALUE OF RANDOM NUMBER
+C   NPRAN  =  RANDOM NUMBER POISSON DISTRIBUTED
+C-----------------------------------------------------------------------
+
+      IMPLICIT NONE
+#define __CONSTAINC__
+#define __RANDPAINC__
+#define __RUNPARINC__
+#include "test_fluorescence_corsika.h"
+
+      DOUBLE PRECISION AMEAN,AN,HMXINT,P,PLIM,RR,S,X
+      INTEGER          NPRAN
+      SAVE
+      DATA             PLIM / 16.D0 /, HMXINT / 2.D9 /
+C-----------------------------------------------------------------------
+
+C  PROTECTION AGAINST NEGATIVE MEAN VALUES
+      AN = 0.D0
+      IF ( AMEAN .GT. 0.D0 ) THEN
+        IF ( AMEAN .LE. PLIM ) THEN
+          CALL RMMARD( RD,1,1 )
+          P  = EXP( -AMEAN )
+          S  = P
+          IF ( RD(1) .LE. S ) GOTO 20
+ 10       AN = AN + 1.D0
+          P  = P * AMEAN / AN
+          S  = S + P
+          IF ( S .LT. RD(1)  .AND.  P .GT. 1.D-30 ) GOTO 10
+        ELSE
+          CALL RMMARD( RD,2,1 )
+          RR = SQRT( (-2.D0)*LOG( RD(1) ) )
+          X  = RR * COS( PI2 * RD(2) )
+          AN = MIN( MAX( 0.D0, AMEAN+X*SQRT( AMEAN ) ), HMXINT )
+        ENDIF
+      ENDIF
+ 20   NPRAN = NINT(AN)
+
+      RETURN
+      END
+
+
+*-- Author :    D. HECK IK FZK KARLSRUHE   17/03/2003
+C=======================================================================
+
+      SUBROUTINE RMMARD( RVEC,LENV,ISEQ )
+
+C-----------------------------------------------------------------------
+C  R(ANDO)M (NUMBER GENERATOR OF) MAR(SAGLIA TYPE) D(OUBLE PRECISION)
+C
+C  THESE ROUTINES (RMMARD,RMMAQD) ARE MODIFIED VERSIONS OF ROUTINES
+C  FROM THE CERN LIBRARIES. DESCRIPTION OF ALGORITHM SEE:
+C   http://wwwasdoc.web.cern.ch/wwwasdoc/cernlib.html (v113)
+C  IT HAS BEEN CHECKED THAT RESULTS ARE BIT-IDENTICAL WITH CERN
+C  DOUBLE PRECISION RANDOM NUMBER GENERATOR RMM48, DESCRIBED IN
+C   http://wwwasdoc.web.cern.ch/wwwasdoc/cernlib.html (v116)
+C  ARGUMENTS:
+C   RVEC   = DOUBLE PREC. VECTOR FIELD TO BE FILLED WITH RANDOM NUMBERS
+C   LENV   = LENGTH OF VECTOR (# OF RANDNUMBERS TO BE GENERATED)
+C   ISEQ   = # OF RANDOM SEQUENCE
+C
+C  VERSION OF D. HECK FOR DOUBLE PRECISION RANDOM NUMBERS.
+C-----------------------------------------------------------------------
+
+      IMPLICIT NONE
+#define __RANMA3INC__
+#define __RANMA4INC__
+#include "test_fluorescence_corsika.h"
+
+      DOUBLE PRECISION RVEC(*)
+      INTEGER          ISEQ,IVEC,LENV
+      SAVE
+C-----------------------------------------------------------------------
+
+      IF ( ISEQ .GT. 0  .AND.  ISEQ .LE. KSEQ ) JSEQ = ISEQ
+
+      DO  IVEC = 1, LENV
+        UNI = U(I97(JSEQ),JSEQ) - U(J97(JSEQ),JSEQ)
+        IF ( UNI .LT. 0.D0 ) UNI = UNI + 1.D0
+        U(I97(JSEQ),JSEQ) = UNI
+        I97(JSEQ)  = I97(JSEQ) - 1
+        IF ( I97(JSEQ) .EQ. 0 ) I97(JSEQ) = 97
+        J97(JSEQ)  = J97(JSEQ) - 1
+        IF ( J97(JSEQ) .EQ. 0 ) J97(JSEQ) = 97
+        C(JSEQ)    = C(JSEQ) - CD
+        IF ( C(JSEQ) .LT. 0.D0 ) C(JSEQ)  = C(JSEQ) + CM
+        UNI        = UNI - C(JSEQ)
+        IF ( UNI .LT. 0.D0 ) UNI = UNI + 1.D0
+C  AN EXACT ZERO HERE IS VERY UNLIKELY, BUT LET''S BE SAFE.
+        IF ( UNI .EQ. 0.D0 ) UNI = TWOM48
+        RVEC(IVEC) = UNI
+      ENDDO
+
+      NTOT(JSEQ) = NTOT(JSEQ) + LENV
+      IF ( NTOT(JSEQ) .GE. MODCNS )  THEN
+        NTOT2(JSEQ) = NTOT2(JSEQ) + 1
+        NTOT(JSEQ)  = NTOT(JSEQ) - MODCNS
+      ENDIF
+
+      RETURN
+      END
+
+
+*-- Author :    The CORSIKA development group   21/04/1994
+C=======================================================================
+
+      DOUBLE PRECISION FUNCTION RHOF( ARG )
+
+C-----------------------------------------------------------------------
+C  RHO (DENSITY) F(UNCTION)
+C
+C  CALCULATES DENSITY (G/CM**3) OF ATMOSPHERE DEPENDING ON HEIGHT (CM)
+C  THIS FUNCTION IS CALLED FROM BOX2, LPMEFFECT, ININKG, CERENK,
+C  MUTRAC, AND INRTAB.
+C  ARGUMENT:
+C   ARG    = HEIGHT (CM)
+C-----------------------------------------------------------------------
+
+      IMPLICIT NONE
+#define __ATMOSINC__
+#define __ATMOS2INC__
+#define __RUNPARINC__
+#include "test_fluorescence_corsika.h"
+
+      DOUBLE PRECISION ARG
+      SAVE
+C-----------------------------------------------------------------------
+
+
+      IF     ( ARG .LT. HLAY(2) ) THEN
+        RHOF = BATM(1) * DATM(1) * EXP( (-ARG) * DATM(1) )
+      ELSEIF ( ARG .LT. HLAY(3) ) THEN
+        RHOF = BATM(2) * DATM(2) * EXP( (-ARG) * DATM(2) )
+      ELSEIF ( ARG .LT. HLAY(4) ) THEN
+        RHOF = BATM(3) * DATM(3) * EXP( (-ARG) * DATM(3) )
+      ELSEIF ( ARG .LT. HLAY(5) ) THEN
+        RHOF = BATM(4) * DATM(4) * EXP( (-ARG) * DATM(4) )
+      ELSE
+        RHOF = DATM(5)
+      ENDIF
+
+      RETURN
+      END
+
+
+*-- Author :    The CORSIKA development group   21/04/1994
+C=======================================================================
+
+      DOUBLE PRECISION FUNCTION THICK( ARG )
+
+C-----------------------------------------------------------------------
+C  THICK(NESS OF ATMOSPHERE)
+C
+C  CALCULATES THICKNESS (G/CM**2) OF ATMOSPHERE DEPENDING ON HEIGHT (CM)
+C  THIS FUNCTION IS CALLED FROM AAMAIN, BOX2, BOX3, EM, INPRM, MUBREM,
+C  MUDECY, MUPRPR, MUTRAC, NRANGC, NUCINT, PRANGC, START, UPDATC,
+C  UPDATE, EGS4, ELECTR, HOWFAR, PHOTON, ININKG, NKG, AND CERENK.
+C  ARGUMENT:
+C   ARG    = HEIGHT (CM)
+C-----------------------------------------------------------------------
+
+      IMPLICIT NONE
+#define __ATMOSINC__
+#define __ATMOS2INC__
+#define __RUNPARINC__
+#include "test_fluorescence_corsika.h"
+
+      DOUBLE PRECISION ARG
+      SAVE
+C-----------------------------------------------------------------------
+
+
+      IF     ( ARG .LT. HLAY(2) ) THEN
+        THICK = AATM(1) + BATM(1) * EXP( (-ARG) * DATM(1) )
+      ELSEIF ( ARG .LT. HLAY(3) ) THEN
+        THICK = AATM(2) + BATM(2) * EXP( (-ARG) * DATM(2) )
+      ELSEIF ( ARG .LT. HLAY(4) ) THEN
+        THICK = AATM(3) + BATM(3) * EXP( (-ARG) * DATM(3) )
+      ELSEIF ( ARG .LT. HLAY(5) ) THEN
+        THICK = AATM(4) + BATM(4) * EXP( (-ARG) * DATM(4) )
+      ELSE
+        THICK = AATM(5) - ARG * DATM(5)
+      ENDIF
+
+      RETURN
+      END
