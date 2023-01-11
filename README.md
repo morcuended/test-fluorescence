@@ -1,6 +1,6 @@
 # Toy model to test fluorescence subroutines within CORSIKA framework
 
-Compile: `gfortran -o fluor test_fluorescence_corsika.F`
+Compile: `gfortran -o fluor src/test_fluorescence_corsika.F`
 
 Execute: `./fluor` 
 
