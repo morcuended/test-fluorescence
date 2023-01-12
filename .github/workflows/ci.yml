@@ -1,0 +1,20 @@
+name: CI
+
+on: [push]
+
+jobs:
+  Explore-GitHub-Actions:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Running on ${{ runner.os }}"
+      - name: Check out repository code
+        uses: actions/checkout@v3
+      - run: echo "The ${{ github.repository }} repository has been cloned to the runner."
+      - run: echo "Ready to test your code on the runner."
+      - name: List files in the repository
+        run: |
+          ls ${{ github.workspace }}
+      - name: Check gfortran compiler
+        run: |
+          gfortran --version
+      - run: echo "Job's status ${{ job.status }}."
