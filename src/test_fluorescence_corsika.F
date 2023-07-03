@@ -39,7 +39,7 @@ C
       ier = 0
       iflag = 2
 
-      call fyield ( zemision, edep, nflpht, iflag, ier, 0, lamb )
+      call fyield (zem, edep, nflpht, iflag, ier, 0, lamb)
       write(*,*)  " Number of fluorescence photons:", nflpht
       if ( nflpht .lt. 1 ) return
 
